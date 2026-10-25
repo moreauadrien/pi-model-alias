@@ -14,10 +14,8 @@ or writes to your settings. Pi itself records package installation in settings.
 
 ## Install from GitHub
 
-Replace `YOUR_USERNAME/YOUR_REPOSITORY` with the actual GitHub owner and repository:
-
 ```sh
-pi install git:github.com/YOUR_USERNAME/YOUR_REPOSITORY
+pi install git:github.com/moreauadrien/pi-model-alias
 ```
 
 Then restart Pi or run `/reload` to load the extension.
@@ -26,7 +24,7 @@ No manual clone, `npm install`, or installation script is needed.
 You can also pin a Git tag or commit, for example:
 
 ```sh
-pi install git:github.com/YOUR_USERNAME/YOUR_REPOSITORY@v0.1.0
+pi install git:github.com/moreauadrien/pi-model-alias@v0.1.0
 ```
 
 The tag must exist in the repository.
@@ -105,7 +103,7 @@ setting overrides the global scope.
 ## Update
 
 ```sh
-pi update git:github.com/YOUR_USERNAME/YOUR_REPOSITORY
+pi update git:github.com/moreauadrien/pi-model-alias
 ```
 
 Restart Pi or run `/reload`. Your personal JSON configuration is unchanged.
@@ -114,7 +112,7 @@ Pinned tags and commits stay pinned when updating.
 ## Uninstall
 
 ```sh
-pi remove git:github.com/YOUR_USERNAME/YOUR_REPOSITORY
+pi remove git:github.com/moreauadrien/pi-model-alias
 ```
 
 Restart Pi or run `/reload`. Optionally delete your personal
@@ -144,5 +142,5 @@ If you installed an earlier version using `node install.mjs`:
 3. Remove `model-aliases/*` from `enabledModels` if the old installer added it
    and you do not want automatic inclusion. If it also added `*`, keep that
    pattern only if you want all models included.
-4. Install this package with `pi install git:github.com/YOUR_USERNAME/YOUR_REPOSITORY`.
+4. Install this package with `pi install git:github.com/moreauadrien/pi-model-alias`.
 5. Restart Pi.
