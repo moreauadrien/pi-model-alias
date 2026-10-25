@@ -1,53 +1,66 @@
-# Alias de modèles Pi
+# Pi Model Aliases
 
-Extension locale pour Pi 1.3.0 (API `registerVirtualModel`), sans dépendance à installer.
+A local extension for Pi 1.3.0 using the `registerVirtualModel` API. Create multiple
+aliases for the same model, each with a fixed thinking level, using a JSON file.
+No additional dependencies are required.
 
-## Prérequis
+## Requirements
 
-- Pi 1.3.0 avec l'API `registerVirtualModel`.
-- Node.js et Git accessibles dans le terminal.
-- Une authentification Pi pour le fournisseur des modèles cibles.
+- Pi 1.3.0 with the `registerVirtualModel` API.
+- Node.js and Git available in your terminal.
+- Pi authentication configured for the target model provider.
 
 ## Installation
 
-Fermer Pi avant l'installation pour éviter les écritures concurrentes dans les réglages.
-Depuis le dépôt local :
+Close Pi before installing to avoid concurrent writes to its settings.
+
+### From GitHub or GitLab
+
+Replace `YOUR_USERNAME` and `YOUR_REPOSITORY` with the actual repository owner
+and name:
+
+```sh
+git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git pi-model-aliases
+cd pi-model-aliases
+node install.mjs
+```
+
+For GitLab or another Git host, use that repository's clone URL instead.
+
+### From an existing local checkout
 
 ```sh
 cd ~/Downloads/pi-model-aliases
 node install.mjs
 ```
 
-Si le dépôt a été publié sur GitHub/GitLab, le cloner d'abord (remplacer
-`<URL_DU_DEPOT>` par son URL réelle) :
+No `npm install` is needed. Use this installer rather than `pi install`: the
+script also configures model scoping.
 
-```sh
-git clone <URL_DU_DEPOT> pi-model-aliases
-cd pi-model-aliases
-node install.mjs
+The installer:
+
+- Copies the extension to `~/.pi/agent/extensions/model-aliases/`.
+- Adds `model-aliases/*` to `enabledModels` in `~/.pi/agent/settings.json`,
+  preserving existing model selections and other settings.
+- Keeps all models available through `*` if no scope was previously configured.
+- Backs up the existing settings file before modifying it.
+- Preserves your installed alias configuration when run again.
+
+Set `PI_CODING_AGENT_DIR` to use a different Pi agent directory.
+
+Restart Pi. The five default aliases will appear in `/model`, `/scoped-models`,
+and the `Ctrl+P` cycle. Authentication for the target provider must already be
+configured, for example through `/login` for OpenAI Codex.
+
+## JSON configuration
+
+Edit the **installed** configuration file, not the copy in the source checkout:
+
+```text
+~/.pi/agent/extensions/model-aliases/aliases.json
 ```
 
-Aucun `npm install` n'est nécessaire. L'installation se fait avec ce script,
-qui configure aussi les scoped models, et non avec `pi install`.
-
-L'installateur copie l'extension dans `~/.pi/agent/extensions/model-aliases/` et ajoute
-`model-aliases/*` à `enabledModels` dans `~/.pi/agent/settings.json`, sans supprimer
-les modèles déjà sélectionnés ni les autres réglages. Si aucun scope n'était défini,
-il conserve tous les modèles via `*`. Le fichier settings existant est sauvegardé
-avant modification. `PI_CODING_AGENT_DIR` permet d'utiliser un autre répertoire agent.
-Une réinstallation conserve le fichier d'alias installé.
-
-Redémarrer Pi. Les cinq alias apparaissent dans `/model`, `/scoped-models` et le
-cycle `Ctrl+P`. L'authentification du fournisseur cible doit déjà être configurée
-(par exemple `/login` pour OpenAI Codex).
-
-## Configuration JSON
-
-Modifier le fichier **installé** :
-
-`~/.pi/agent/extensions/model-aliases/aliases.json`
-
-Exemple d'entrée à ajouter dans le tableau `aliases` :
+Add entries to its `aliases` array, for example:
 
 ```json
 {
@@ -59,49 +72,54 @@ Exemple d'entrée à ajouter dans le tableau `aliases` :
 }
 ```
 
-- `id` : identifiant unique, lettres/chiffres/tirets/underscores uniquement.
-- `name` : nom affiché facultatif. Les deux-points sont réservés au nom affiché,
-  car Pi utilise `:niveau` dans la syntaxe CLI.
-- `provider` et `model` : fournisseur et ID exact du modèle physique.
-- `thinking` : `off`, `minimal`, `low`, `medium`, `high`, `xhigh` ou `max`.
+- `id`: unique identifier containing only letters, digits, hyphens, or underscores.
+- `name`: optional display name. Colons are allowed in display names, but not IDs,
+  because Pi uses `:level` in its CLI syntax.
+- `provider` and `model`: the provider and exact physical model ID.
+- `thinking`: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`.
 
-Le niveau est fixé pour chaque alias, y compris les appels d'outils, retries et
-résumés. Pi adapte les niveaux aux capacités du modèle : dans le catalogue actuel,
-`minimal` correspond notamment à `low` pour ces modèles Codex.
+Each alias has a fixed thinking level, including tool follow-ups, retries, and
+summaries. Pi adapts thinking levels to the physical model's capabilities. In the
+current catalog, `minimal` maps to `low` for these Codex models.
 
-Les valeurs initiales supposent GPT-6 Luna, Sol et Astra sur `openai-codex`.
-Si tu utilises GPT-5.6 Luna/Sol ou un autre fournisseur, modifier les IDs correspondants.
-Les alias sont listés même si le fournisseur cible n'est pas encore authentifié ;
-Pi signalera l'absence de modèle ou d'authentification lors de l'utilisation.
+The default configuration targets GPT-6 Luna, Sol, and Astra through
+`openai-codex`. Change the model IDs if you use GPT-5.6 Luna/Sol or another provider.
+Aliases are listed even if their target provider is not yet authenticated; Pi
+reports missing models or credentials when you try to use them.
 
-**Redémarrer Pi après un ajout ou une suppression**, pour recalculer le scope.
-`/reload` recharge l'extension et le JSON, mais ne reconstruit pas le scope de la
-session en cours dans Pi 1.3.0. Ne pas supprimer `model-aliases/*` des réglages si
-tu veux conserver l'inclusion automatique des futurs alias. Un `--models` explicite
-ou un `enabledModels` de projet remplace le scope global : y inclure aussi
-`model-aliases/*` dans ce cas.
+### Automatic model scoping
 
-## Mise à jour
+The `model-aliases/*` pattern includes all aliases, including any you add later.
+Keep this pattern in your settings to retain automatic inclusion.
 
-Fermer Pi puis, depuis le clone lié à un dépôt distant :
+**Restart Pi after adding or removing aliases** to rebuild the model scope.
+`/reload` reloads the extension and JSON configuration, but does not rebuild the
+current session's scope in Pi 1.3.0.
+
+An explicit `--models` option or project-level `enabledModels` setting overrides
+the global scope. Include `model-aliases/*` there as well if you use either.
+
+## Updating
+
+Close Pi, then run these commands from a clone connected to a remote repository:
 
 ```sh
 git pull --ff-only
 node install.mjs
 ```
 
-Redémarrer Pi. Le JSON installé et personnalisé n'est pas écrasé par la mise à jour.
+Restart Pi. Updates do not overwrite your installed, customized alias JSON file.
 
-## Vérifications
+## Tests
 
-Depuis le dépôt source :
+Run from the source checkout:
 
 ```sh
 node --test test.mjs
 ```
 
-## Désinstallation
+## Uninstalling
 
-Supprimer `~/.pi/agent/extensions/model-aliases/`, retirer `model-aliases/*` de
-`enabledModels`, puis redémarrer Pi. Conserver `*` uniquement si tous les modèles
-doivent rester inclus.
+Delete `~/.pi/agent/extensions/model-aliases/`, remove `model-aliases/*` from
+`enabledModels`, and restart Pi. Keep `*` only if you want all models to remain
+included.
