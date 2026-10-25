@@ -1,18 +1,17 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import extension, { parseAliases, registerAliases } from "./index.js";
-import { install, withAliasScope } from "./install.mjs";
+import { loadAliases, parseAliases, registerAliases } from "./index.js";
 
-const config = readFileSync(new URL("./aliases.json", import.meta.url), "utf8");
+const config = readFileSync(new URL("./examples/model-aliases.json", import.meta.url), "utf8");
 
-test("five aliases always route to their configured physical model and thinking", () => {
+test("example aliases route to their configured physical model and fixed thinking", () => {
   const models = [];
-  extension({ registerVirtualModel: (model) => models.push(model) });
-  assert.equal(models.length, 5);
   const aliases = parseAliases(config);
+  registerAliases({ registerVirtualModel: (model) => models.push(model) }, aliases);
+  assert.equal(models.length, 5);
   for (const [i, model] of models.entries()) {
     const alias = aliases[i];
     assert.equal(model.provider, "model-aliases");
@@ -47,58 +46,37 @@ test("rejects bad JSON, duplicate IDs, invalid fields and recursive targets", ()
   assert.throws(() => parseAliases(JSON.stringify({ aliases: [alias, alias] })), /Duplicate/);
 });
 
-test("scope preserves existing choices; wildcard includes future alias IDs", () => {
-  const settings = { theme: "dark", enabledModels: ["anthropic/*:high"] };
-  const scoped = withAliasScope(settings);
-  assert.deepEqual(scoped.enabledModels, ["anthropic/*:high", "model-aliases/*"]);
-  assert.equal(scoped.theme, "dark");
-  assert.deepEqual(settings.enabledModels, ["anthropic/*:high"]);
-  assert.deepEqual(withAliasScope(scoped), scoped);
-  assert.deepEqual(withAliasScope({}).enabledModels, ["*", "model-aliases/*"]);
-  assert.deepEqual(withAliasScope({ enabledModels: [] }).enabledModels, ["*", "model-aliases/*"]);
-  assert.throws(() => withAliasScope({ enabledModels: "*" }));
+test("missing config means no aliases; loading never creates or changes files", () => {
+  const dir = mkdtempSync(join(tmpdir(), "pi-alias-config-"));
+  try {
+    const path = join(dir, "model-aliases.json");
+    assert.deepEqual(loadAliases(path), []);
+    assert.deepEqual(readdirSync(dir), []);
+    writeFileSync(path, config);
+    assert.deepEqual(loadAliases(path), parseAliases(config));
+    assert.equal(readFileSync(path, "utf8"), config);
+    writeFileSync(path, "{bad");
+    assert.throws(() => loadAliases(path));
+    assert.equal(readFileSync(path, "utf8"), "{bad");
+    assert.throws(() => loadAliases(dir));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("supports arbitrary models, display names and an empty configuration", () => {
+  const aliases = parseAliases(JSON.stringify({ aliases: [{
+    id: "my-model-fast", name: "My model: fast", provider: "my-provider",
+    model: "some-model-id", thinking: "low",
+  }] }));
   const models = [];
-  registerAliases({ registerVirtualModel: (model) => models.push(model) }, [
-    { id: "future-alias", provider: "openai-codex", model: "gpt-6-sol", thinking: "high" },
-  ]);
-  assert.equal(`${models[0].provider}/${models[0].id}`.startsWith("model-aliases/"), true);
+  registerAliases({ registerVirtualModel: (model) => models.push(model) }, aliases);
+  assert.equal(models[0].name, "My model: fast");
+  assert.deepEqual(parseAliases('{"aliases":[]}'), []);
 });
 
-test("default install never creates or changes settings", () => {
-  const dir = mkdtempSync(join(tmpdir(), "pi-alias-default-"));
-  try {
-    const settingsPath = join(dir, "settings.json");
-    install(dir);
-    assert.equal(existsSync(settingsPath), false);
-    for (const content of ['{ "theme": "dark", "enabledModels": ["anthropic/*"] }\n', "{bad"]) {
-      writeFileSync(settingsPath, content);
-      install(dir);
-      assert.equal(readFileSync(settingsPath, "utf8"), content);
-    }
-    assert.equal(readdirSync(dir).some((file) => file.endsWith(".bak")), false);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-test("opt-in scoping preserves settings and user aliases; fails safely on malformed settings", () => {
-  const dir = mkdtempSync(join(tmpdir(), "pi-model-aliases-"));
-  try {
-    const settingsPath = join(dir, "settings.json");
-    writeFileSync(settingsPath, JSON.stringify({ theme: "dark", enabledModels: ["openai-codex/gpt-6-sol"] }));
-    install(dir, { scopedModels: true });
-    assert.deepEqual(JSON.parse(readFileSync(settingsPath, "utf8")), {
-      theme: "dark", enabledModels: ["openai-codex/gpt-6-sol", "model-aliases/*"],
-    });
-    const aliasPath = join(dir, "extensions/model-aliases/aliases.json");
-    const custom = JSON.stringify({ aliases: [parseAliases(config)[0]] });
-    writeFileSync(aliasPath, custom);
-    install(dir);
-    assert.equal(readFileSync(aliasPath, "utf8"), custom);
-    writeFileSync(settingsPath, "{bad");
-    assert.throws(() => install(dir, { scopedModels: true }));
-    assert.equal(readFileSync(settingsPath, "utf8"), "{bad");
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+test("Pi package manifest exposes only the extension", () => {
+  const manifest = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+  assert.deepEqual(manifest.pi, { extensions: ["./index.js"] });
+  assert.equal(manifest.scripts.postinstall, undefined);
 });

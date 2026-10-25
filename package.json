@@ -1,7 +1,12 @@
 {
-  "name": "pi-model-aliases-local",
-  "private": true,
+  "name": "pi-model-aliases",
+  "version": "0.1.0",
+  "description": "JSON-configured model aliases with fixed thinking levels for Pi",
   "type": "module",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./index.js"]
+  },
   "scripts": {
     "test": "node --test test.mjs"
   }
