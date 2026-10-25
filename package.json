@@ -1,6 +1,6 @@
 {
   "name": "pi-model-aliases",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "JSON-configured model aliases with fixed thinking levels for Pi",
   "type": "module",
   "keywords": ["pi-package"],

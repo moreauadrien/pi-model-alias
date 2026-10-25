@@ -7,28 +7,24 @@ export const PROVIDER = "model-aliases";
 
 export function parseAliases(text) {
   const config = JSON.parse(text);
-  if (!config || !Array.isArray(config.aliases)) {
-    throw new Error("model-aliases.json: expected an aliases array");
+  if (!config || Array.isArray(config) || typeof config !== "object") {
+    throw new Error("model-aliases.json: expected an object of alias IDs to provider/model:level strings");
   }
   const ids = new Set();
-  for (const alias of config.aliases) {
-    if (!alias || typeof alias.id !== "string" || !/^[a-zA-Z0-9_-]+$/.test(alias.id)) {
-      throw new Error("model-aliases.json: each id must contain only letters, digits, _ or -");
+  return Object.entries(config).map(([id, target]) => {
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new Error(`Invalid alias ID: ${id}`);
     }
-    if (ids.has(alias.id.toLowerCase())) throw new Error(`Duplicate alias: ${alias.id}`);
-    ids.add(alias.id.toLowerCase());
-    for (const key of ["provider", "model"]) {
-      if (typeof alias[key] !== "string" || !alias[key].trim()) {
-        throw new Error(`${alias.id}: missing ${key}`);
-      }
-    }
-    if (alias.provider === PROVIDER) throw new Error(`${alias.id}: target must be a physical model`);
-    if (!LEVELS.has(alias.thinking)) throw new Error(`${alias.id}: invalid thinking level`);
-    if (alias.name !== undefined && (typeof alias.name !== "string" || !alias.name.trim())) {
-      throw new Error(`${alias.id}: name must be a nonempty string`);
-    }
-  }
-  return config.aliases;
+    if (ids.has(id.toLowerCase())) throw new Error(`Duplicate alias: ${id}`);
+    ids.add(id.toLowerCase());
+    if (typeof target !== "string") throw new Error(`${id}: expected provider/model:level`);
+    const match = /^([^/]+)\/(.+):([^:]+)$/.exec(target);
+    if (!match) throw new Error(`${id}: expected provider/model:level`);
+    const [, provider, model, thinking] = match;
+    if (provider === PROVIDER) throw new Error(`${id}: target must be a physical model`);
+    if (!LEVELS.has(thinking)) throw new Error(`${id}: invalid thinking level`);
+    return { id, provider, model, thinking };
+  });
 }
 
 export function registerAliases(pi, aliases) {
@@ -36,7 +32,7 @@ export function registerAliases(pi, aliases) {
     pi.registerVirtualModel({
       provider: PROVIDER,
       id: alias.id,
-      name: alias.name ?? alias.id,
+      name: alias.id,
       thinkingLevels: [alias.thinking],
       route(_request, ctx) {
         const model = ctx.modelRegistry.find(alias.provider, alias.model);

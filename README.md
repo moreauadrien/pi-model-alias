@@ -39,44 +39,28 @@ Create this file in your Pi agent directory:
 
 If you set `PI_CODING_AGENT_DIR`, put the file in that directory instead.
 The file is separate from the installed package so updates do not overwrite it.
-A missing file or an empty `aliases` array enables no aliases.
+A missing file or an empty object (`{}`) enables no aliases.
 
 Example configuration:
 
 ```json
 {
-  "aliases": [
-    {
-      "id": "my-model-fast",
-      "name": "My model (fast)",
-      "provider": "YOUR_PROVIDER",
-      "model": "YOUR_MODEL_ID",
-      "thinking": "low"
-    },
-    {
-      "id": "my-model-deep",
-      "name": "My model (deep)",
-      "provider": "YOUR_PROVIDER",
-      "model": "YOUR_MODEL_ID",
-      "thinking": "high"
-    }
-  ]
+  "sol-high": "openai/gpt-6-sol:high",
+  "sol-low": "openai/gpt-6-sol:low"
 }
 ```
 
-Replace the provider and model placeholders with exact IDs from your Pi catalog.
-The two aliases above target the same model with different thinking levels.
-See [`examples/model-aliases.json`](examples/model-aliases.json) for a concrete
-OpenAI Codex configuration; that example is not loaded automatically.
+Each key is the alias ID (letters, digits, hyphens, or underscores). Each value
+is `provider/model:thinking`, using exact physical provider and model IDs from
+Pi's catalog. Thinking can be `off`, `minimal`, `low`, `medium`, `high`, `xhigh`,
+or `max`. Alias display names match their IDs. The two aliases above target the
+same model at different thinking levels. See
+[`examples/model-aliases.json`](examples/model-aliases.json) for an OpenAI Codex
+configuration; that example is not loaded automatically.
 
-### Fields
-
-- `id`: unique alias ID containing only letters, digits, hyphens, or underscores.
-- `name`: optional display name; defaults to `id`. Colons are allowed in display
-  names, but not IDs, because Pi uses `:level` in its CLI syntax.
-- `provider`: the target model's physical provider ID.
-- `model`: the exact physical model ID, not another virtual model.
-- `thinking`: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`.
+**Updating from the old format?** Replace the `aliases` array with a flat JSON
+object: each old `id` becomes a key and `provider/model:thinking` its value.
+Custom `name` fields are no longer supported.
 
 Aliases are registered under the `model-aliases` provider. Each alias always
 routes to its configured physical model and thinking level, including tool
@@ -136,7 +120,8 @@ The example configuration is not an extension and is never auto-loaded.
 If you installed an earlier version using `node install.mjs`:
 
 1. Move your customized `~/.pi/agent/extensions/model-aliases/aliases.json` to
-   `~/.pi/agent/model-aliases.json`.
+   `~/.pi/agent/model-aliases.json` and convert its `aliases` array to the flat
+   `{"id": "provider/model:thinking"}` format above.
 2. Delete the old `~/.pi/agent/extensions/model-aliases/` directory to avoid
    loading both versions.
 3. Remove `model-aliases/*` from `enabledModels` if the old installer added it

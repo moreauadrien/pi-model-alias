@@ -1,38 +1,7 @@
 {
-  "aliases": [
-    {
-      "id": "luna-high",
-      "provider": "openai-codex",
-      "model": "gpt-6-luna",
-      "thinking": "high"
-    },
-    {
-      "id": "sol-minimal",
-      "name": "sol:minimal",
-      "provider": "openai-codex",
-      "model": "gpt-6-sol",
-      "thinking": "minimal"
-    },
-    {
-      "id": "sol-medium",
-      "name": "sol:medium",
-      "provider": "openai-codex",
-      "model": "gpt-6-sol",
-      "thinking": "medium"
-    },
-    {
-      "id": "astra-minimal",
-      "name": "astra:minimal",
-      "provider": "openai-codex",
-      "model": "gpt-6-astra",
-      "thinking": "minimal"
-    },
-    {
-      "id": "astra-medium",
-      "name": "astra:medium",
-      "provider": "openai-codex",
-      "model": "gpt-6-astra",
-      "thinking": "medium"
-    }
-  ]
+  "luna-high": "openai-codex/gpt-6-luna:high",
+  "sol-minimal": "openai-codex/gpt-6-sol:minimal",
+  "sol-medium": "openai-codex/gpt-6-sol:medium",
+  "astra-minimal": "openai-codex/gpt-6-astra:minimal",
+  "astra-medium": "openai-codex/gpt-6-astra:medium"
 }

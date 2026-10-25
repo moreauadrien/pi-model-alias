@@ -16,6 +16,7 @@ test("example aliases route to their configured physical model and fixed thinkin
     const alias = aliases[i];
     assert.equal(model.provider, "model-aliases");
     assert.equal(model.id, alias.id);
+    assert.equal(model.name, alias.id);
     assert.deepEqual(model.thinkingLevels, [alias.thinking]);
     const physical = { provider: alias.provider, id: alias.model };
     const ctx = { modelRegistry: { find: (provider, id) => {
@@ -32,18 +33,15 @@ test("example aliases route to their configured physical model and fixed thinkin
   }
 });
 
-test("rejects bad JSON, duplicate IDs, invalid fields and recursive targets", () => {
-  const alias = parseAliases(config)[0];
-  for (const bad of ["{", "null", "{}", '{"aliases":[null]}']) {
-    assert.throws(() => parseAliases(bad));
-  }
-  for (const change of [
-    { id: "sol:high" }, { thinking: "maximum" }, { provider: "model-aliases" },
-    { model: "" }, { name: 42 },
+test("rejects bad JSON, invalid IDs, targets and recursive targets", () => {
+  for (const bad of ["{", "null", "[]", '"str"', '{"aliases":[]}', '{"sol:high":"openai/model:high"}',
+    '{"SOL":"openai/model:low","sol":"openai/model:high"}',
+    '{"sol":42}', '{"sol":"model:high"}', '{"sol":"openai/:high"}',
+    '{"sol":"/model:high"}', '{"sol":"openai/model"}',
+    '{"sol":"openai/model:maximum"}', '{"sol":"model-aliases/model:high"}',
   ]) {
-    assert.throws(() => parseAliases(JSON.stringify({ aliases: [{ ...alias, ...change }] })));
+    assert.throws(() => parseAliases(bad), bad);
   }
-  assert.throws(() => parseAliases(JSON.stringify({ aliases: [alias, alias] })), /Duplicate/);
 });
 
 test("missing config means no aliases; loading never creates or changes files", () => {
@@ -64,15 +62,11 @@ test("missing config means no aliases; loading never creates or changes files", 
   }
 });
 
-test("supports arbitrary models, display names and an empty configuration", () => {
-  const aliases = parseAliases(JSON.stringify({ aliases: [{
-    id: "my-model-fast", name: "My model: fast", provider: "my-provider",
-    model: "some-model-id", thinking: "low",
-  }] }));
-  const models = [];
-  registerAliases({ registerVirtualModel: (model) => models.push(model) }, aliases);
-  assert.equal(models[0].name, "My model: fast");
-  assert.deepEqual(parseAliases('{"aliases":[]}'), []);
+test("supports arbitrary models and an empty configuration", () => {
+  assert.deepEqual(parseAliases('{"sol-high":"openai/gpt-6-sol:high"}'), [
+    { id: "sol-high", provider: "openai", model: "gpt-6-sol", thinking: "high" },
+  ]);
+  assert.deepEqual(parseAliases("{}"), []);
 });
 
 test("Pi package manifest exposes only the extension", () => {
