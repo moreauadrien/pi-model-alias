@@ -17,12 +17,12 @@ export function withAliasScope(settings) {
   return { ...settings, enabledModels: [...new Set([...patterns, "model-aliases/*"])] };
 }
 
-export function install(agentDir) {
+export function install(agentDir, { scopedModels = false } = {}) {
   const source = dirname(fileURLToPath(import.meta.url));
   const destination = join(agentDir, "extensions", "model-aliases");
   const settingsPath = join(agentDir, "settings.json");
-  const original = existsSync(settingsPath) ? readFileSync(settingsPath, "utf8") : undefined;
-  const settings = withAliasScope(original === undefined ? {} : JSON.parse(original));
+  const original = scopedModels && existsSync(settingsPath) ? readFileSync(settingsPath, "utf8") : undefined;
+  const settings = scopedModels ? withAliasScope(original === undefined ? {} : JSON.parse(original)) : undefined;
   parseAliases(readFileSync(join(source, "aliases.json"), "utf8"));
   if (existsSync(join(destination, "aliases.json"))) {
     parseAliases(readFileSync(join(destination, "aliases.json"), "utf8"));
@@ -39,7 +39,7 @@ export function install(agentDir) {
     }
   }
 
-  if (original === undefined || JSON.stringify(settings) !== JSON.stringify(JSON.parse(original))) {
+  if (scopedModels && (original === undefined || JSON.stringify(settings) !== JSON.stringify(JSON.parse(original)))) {
     if (original !== undefined) {
       const backup = `${settingsPath}.${Date.now()}.bak`;
       copyFileSync(settingsPath, backup, constants.COPYFILE_EXCL);
@@ -54,9 +54,15 @@ export function install(agentDir) {
   }
   console.log(`Extension: ${destination}`);
   console.log(`Configuration: ${join(destination, "aliases.json")}`);
-  console.log("Restart Pi to load aliases and their model scope.");
+  console.log(scopedModels ? "Alias scope enabled. Restart Pi." : "Scoped models unchanged. Restart Pi to load aliases.");
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  install(resolve(process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent")));
+  const args = process.argv.slice(2);
+  if (args.some((arg) => arg !== "--scoped-models")) {
+    throw new Error("Usage: node install.mjs [--scoped-models]");
+  }
+  install(resolve(process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent")), {
+    scopedModels: args.includes("--scoped-models"),
+  });
 }

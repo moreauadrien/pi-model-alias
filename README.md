@@ -34,23 +34,25 @@ cd ~/Downloads/pi-model-aliases
 node install.mjs
 ```
 
-No `npm install` is needed. Use this installer rather than `pi install`: the
-script also configures model scoping.
+No `npm install` is needed.
 
 The installer:
 
 - Copies the extension to `~/.pi/agent/extensions/model-aliases/`.
-- Adds `model-aliases/*` to `enabledModels` in `~/.pi/agent/settings.json`,
-  preserving existing model selections and other settings.
-- Keeps all models available through `*` if no scope was previously configured.
-- Backs up the existing settings file before modifying it.
+- Leaves `settings.json` and your scoped model selection untouched by default.
 - Preserves your installed alias configuration when run again.
+
+Automatic inclusion in scoped models is optional; see below.
 
 Set `PI_CODING_AGENT_DIR` to use a different Pi agent directory.
 
-Restart Pi. The five default aliases will appear in `/model`, `/scoped-models`,
-and the `Ctrl+P` cycle. Authentication for the target provider must already be
-configured, for example through `/login` for OpenAI Codex.
+Restart Pi to load the five default aliases. If you already use a restricted
+model scope, select the aliases you want through `/scoped-models` to include them
+in `/model` and the `Ctrl+P` cycle. With no scope configured, Pi makes all models
+available as usual.
+
+Authentication for the target provider must already be configured, for example
+through `/login` for OpenAI Codex.
 
 ## JSON configuration
 
@@ -87,10 +89,26 @@ The default configuration targets GPT-6 Luna, Sol, and Astra through
 Aliases are listed even if their target provider is not yet authenticated; Pi
 reports missing models or credentials when you try to use them.
 
-### Automatic model scoping
+### Optional automatic model scoping
+
+Installation does **not** change scoped models by default. To explicitly opt in,
+close Pi and run:
+
+```sh
+node install.mjs --scoped-models
+```
+
+This adds `model-aliases/*` to `enabledModels` in your agent's `settings.json`,
+preserving existing selections and backing up the file before modification.
+If no scope was configured, it preserves access to all models through `*`.
 
 The `model-aliases/*` pattern includes all aliases, including any you add later.
 Keep this pattern in your settings to retain automatic inclusion.
+
+If you installed an earlier version that added this pattern automatically,
+remove `model-aliases/*` from `enabledModels` to undo it. Updating the extension
+does not remove existing selections. If that earlier installer also added `*`,
+remove it only if you no longer want all models included.
 
 **Restart Pi after adding or removing aliases** to rebuild the model scope.
 `/reload` reloads the extension and JSON configuration, but does not rebuild the
@@ -120,6 +138,7 @@ node --test test.mjs
 
 ## Uninstalling
 
-Delete `~/.pi/agent/extensions/model-aliases/`, remove `model-aliases/*` from
-`enabledModels`, and restart Pi. Keep `*` only if you want all models to remain
-included.
+Delete `~/.pi/agent/extensions/model-aliases/` and restart Pi. If you opted in to
+automatic scoping, also remove `model-aliases/*` from `enabledModels`. Remove any
+individually selected aliases from the scope as well. Keep `*` only if you want
+all models to remain included.

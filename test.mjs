@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -64,12 +64,29 @@ test("scope preserves existing choices; wildcard includes future alias IDs", () 
   assert.equal(`${models[0].provider}/${models[0].id}`.startsWith("model-aliases/"), true);
 });
 
-test("installer preserves settings and user aliases on reinstall; fails safely on malformed settings", () => {
+test("default install never creates or changes settings", () => {
+  const dir = mkdtempSync(join(tmpdir(), "pi-alias-default-"));
+  try {
+    const settingsPath = join(dir, "settings.json");
+    install(dir);
+    assert.equal(existsSync(settingsPath), false);
+    for (const content of ['{ "theme": "dark", "enabledModels": ["anthropic/*"] }\n', "{bad"]) {
+      writeFileSync(settingsPath, content);
+      install(dir);
+      assert.equal(readFileSync(settingsPath, "utf8"), content);
+    }
+    assert.equal(readdirSync(dir).some((file) => file.endsWith(".bak")), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("opt-in scoping preserves settings and user aliases; fails safely on malformed settings", () => {
   const dir = mkdtempSync(join(tmpdir(), "pi-model-aliases-"));
   try {
     const settingsPath = join(dir, "settings.json");
     writeFileSync(settingsPath, JSON.stringify({ theme: "dark", enabledModels: ["openai-codex/gpt-6-sol"] }));
-    install(dir);
+    install(dir, { scopedModels: true });
     assert.deepEqual(JSON.parse(readFileSync(settingsPath, "utf8")), {
       theme: "dark", enabledModels: ["openai-codex/gpt-6-sol", "model-aliases/*"],
     });
@@ -79,7 +96,7 @@ test("installer preserves settings and user aliases on reinstall; fails safely o
     install(dir);
     assert.equal(readFileSync(aliasPath, "utf8"), custom);
     writeFileSync(settingsPath, "{bad");
-    assert.throws(() => install(dir));
+    assert.throws(() => install(dir, { scopedModels: true }));
     assert.equal(readFileSync(settingsPath, "utf8"), "{bad");
   } finally {
     rmSync(dir, { recursive: true, force: true });
